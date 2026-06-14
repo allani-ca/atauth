@@ -195,9 +195,22 @@ export class OAuthService {
       // Fall back to DID
     }
 
-    const email = (session as unknown as Record<string, unknown>).email as
-      | string
-      | undefined;
+    // Fetch email from PDS via com.atproto.server.getSession (requires account:email scope)
+    let email: string | undefined;
+    try {
+      const sessionRes = await session.fetchHandler(
+        "/xrpc/com.atproto.server.getSession",
+      );
+      if (sessionRes.ok) {
+        const data = (await sessionRes.json()) as {
+          email?: string;
+          emailConfirmed?: boolean;
+        };
+        email = data.email;
+      }
+    } catch {
+      // PDS may not support or may deny email access; continue without it
+    }
 
     return { did, handle, email };
   }
