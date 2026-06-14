@@ -709,7 +709,7 @@ export function createAuthorizeRouter(
       }
 
       // Get the user's DID and handle from the AT Protocol session
-      const { did, handle } = callbackResult;
+      const { did, handle, email } = callbackResult;
       console.log(`[OIDC Callback] Authenticated user: ${handle} (${did})`);
 
       // Get the OIDC authorization code we saved earlier (stored in code_verifier field)
@@ -732,6 +732,9 @@ export function createAuthorizeRouter(
 
       // Update with user info
       db.updateAuthorizationCodeUser(oidcAuthCode, did, handle);
+
+      // Cache PDS-provided email for userinfo endpoint
+      db.upsertOIDCUserEmail(did, authData.client_id, handle, email);
 
       // Check client access rules
       const oidcClient = db.getOIDCClient(authData.client_id);

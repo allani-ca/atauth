@@ -5,11 +5,11 @@
  */
 
 // Re-export all types from sub-modules
-export * from './oidc.js';
-export * from './passkey.js';
-export * from './mfa.js';
-export * from './email.js';
-export * from './proxy.js';
+export * from "./oidc.js";
+export * from "./passkey.js";
+export * from "./mfa.js";
+export * from "./email.js";
+export * from "./proxy.js";
 
 export interface GatewayTokenPayload {
   /** AT Protocol DID (e.g., "did:plc:xyz...") */
@@ -62,12 +62,13 @@ export interface UserMapping {
   did: string;
   app_id: string;
   user_id: number;
+  email?: string;
   handle: string;
   linked_at: Date;
 }
 
 /** Session connection state for conflict detection */
-export type SessionConnectionState = 'pending' | 'connected' | 'disconnected';
+export type SessionConnectionState = "pending" | "connected" | "disconnected";
 
 /** Extended session info with connection tracking */
 export interface ActiveSession extends AppSession {
@@ -77,7 +78,7 @@ export interface ActiveSession extends AppSession {
 }
 
 /** Session conflict resolution options */
-export type SessionResolution = 'transfer' | 'cancel' | 'close_others';
+export type SessionResolution = "transfer" | "cancel" | "close_others";
 
 /** Session conflict information returned to client */
 export interface SessionConflict {

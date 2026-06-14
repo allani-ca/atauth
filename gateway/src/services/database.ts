@@ -167,6 +167,13 @@ export class DatabaseService {
       // Column already exists
     }
 
+    // Add email column to user_mappings if it doesn't exist
+    try {
+      this.db.exec('ALTER TABLE user_mappings ADD COLUMN email TEXT');
+    } catch {
+      // Column already exists
+    }
+
     // Create refresh tokens table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -456,13 +463,25 @@ export class DatabaseService {
 
   setUserMapping(mapping: Omit<UserMapping, 'linked_at'>): void {
     const stmt = this.db.prepare(`
-      INSERT INTO user_mappings (did, app_id, user_id, handle)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO user_mappings (did, app_id, user_id, handle, email)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(did, app_id) DO UPDATE SET
         user_id = excluded.user_id,
-        handle = excluded.handle
+        handle = excluded.handle,
+        email = COALESCE(excluded.email, email)
     `);
-    stmt.run(mapping.did, mapping.app_id, mapping.user_id, mapping.handle);
+    stmt.run(mapping.did, mapping.app_id, mapping.user_id, mapping.handle, mapping.email ?? null);
+  }
+
+  upsertOIDCUserEmail(did: string, appId: string, handle: string, email?: string): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO user_mappings (did, app_id, user_id, handle, email)
+      VALUES (?, ?, 0, ?, ?)
+      ON CONFLICT(did, app_id) DO UPDATE SET
+        handle = excluded.handle,
+        email = COALESCE(excluded.email, email)
+    `);
+    stmt.run(did, appId, handle, email ?? null);
   }
 
   // Session methods
