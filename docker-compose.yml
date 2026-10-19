@@ -11,7 +11,7 @@ services:
     build:
       context: ./gateway
       dockerfile: Dockerfile
-    image: ghcr.io/allani-ca/atauth:latest
+    image: ghcr.io/allani-ca/atauth:2.5.1
     container_name: atauth
     restart: unless-stopped
     security_opt:

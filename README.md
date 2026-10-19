@@ -1,50 +1,109 @@
-# ATAuth - OIDC Provider for AT Protocol
+> **Originally based on [Tynan Purdy's ATAuth](https://tangled.org/tynanpurdy.com/atauth),
+> itself based on [Cache8063/atauth](https://github.com/Cache8063/atauth).**
 
-An OpenID Connect (OIDC) Provider that uses AT Protocol OAuth (Bluesky) as the identity source. Authenticate users via their `@handle` -- works with Bluesky or any self-hosted PDS.
+# ATAuth - OIDC for AT Protocol
 
-## What It Does
+ATAuth is a self-hosted OpenID Connect (OIDC) provider that lets applications use an AT Protocol identity—such as a Bluesky account—for sign-in. A user starts with their `@handle`; ATAuth uses the user's Personal Data Server (PDS) to complete AT Protocol OAuth, then issues standard OIDC tokens to registered applications.
 
-ATAuth sits between your apps and AT Protocol identity:
+## Why This Exists
+
+AT Protocol OAuth and OpenID Connect solve related problems, but they are different protocols. Many infrastructure tools and self-hosted applications already support OIDC, while they do not natively know how to sign a user in through that user's AT Protocol identity and PDS.
+
+Without a bridge, each application would need its own AT Protocol integration, or users would need to maintain a separate account in another identity system. ATAuth provides that bridge once:
+
+- **Sign in with AT Protocol.** Users authenticate through their own PDS, whether that is Bluesky-hosted or self-hosted.
+- **Use standard OIDC with your apps.** ATAuth exposes OIDC discovery, authorization, token, UserInfo, and JWKS endpoints for compatible relying parties.
+- **Keep one stable identity across services.** The DID is the durable account identifier; the handle is available for display and username mapping.
+- **Self-host the identity layer.** You control the deployment and configure which registered applications and identities can access it.
+
+A practical use case is using a Bluesky identity with Cloudflare Access to protect personal infrastructure and internal tools. The same ATAuth instance can also serve OIDC-compatible applications such as dashboards and self-hosted services. Apps that do not support OIDC can use ATAuth's optional nginx `auth_request` forward-auth integration.
+
+ATAuth is not a PDS and does not replace Bluesky or another AT Protocol service. It bridges AT Protocol authentication to OIDC so existing applications can use it without implementing AT Protocol themselves.
+
+## How It Works
 
 ```text
-Your App (OIDC Client)
-    |
-    v
-ATAuth (OIDC Provider)
-    |
-    v
-User's PDS (Bluesky / self-hosted)
-    |
-    v
-User authenticates with their AT Proto identity
-    |
-    v
-ATAuth issues standard OIDC tokens back to your app
+Your app (OIDC client / relying party)
+              |
+              | OpenID Connect
+              v
+        ATAuth (OIDC provider)
+              |
+              | AT Protocol OAuth
+              v
+      User's PDS / authorization server
+              |
+              v
+      User authenticates with AT Protocol
+
+ATAuth returns OIDC tokens to the registered app.
 ```
 
-Any app that supports OpenID Connect can use ATAuth. No custom integration needed.
-
-## Screenshots
-
-<!-- Add your own screenshots to docs/screenshots/ -->
-
-![Login - Sign in with your AT Protocol identity](docs/screenshots/login.png)
-
-![Admin Dashboard - Stats and quick actions](docs/screenshots/dashboard.png)
-
-![Setup Wizard - One-click setup for 20+ self-hosted apps](docs/screenshots/wizard.png)
-
-![Access Rules - Per-user control with DID and handle patterns](docs/screenshots/access-rules.png)
+Any application that supports standard OpenID Connect can integrate through its OIDC settings. Applications without OIDC support can use the optional forward-auth integration.
 
 ## Features
 
-- **Standard OIDC Provider**: Discovery, authorization, token, userinfo, revocation, JWKS endpoints
-- **Passkey Login**: WebAuthn/FIDO2 support -- users can register passkeys and skip the Bluesky OAuth flow
-- **Forward-Auth SSO Proxy**: nginx `auth_request` based single sign-on for any web service
-- **Admin Dashboard**: Web UI with setup wizard for 20+ common self-hosted apps
-- **Access Control**: Per-user DID and handle pattern rules with deny-overrides
-- **PKCE Support**: Configurable per-client
-- **ES256 Signed JWTs**: Proper key rotation via JWKS endpoint
+- **Standard OIDC Provider**: Discovery, authorization, token, UserInfo, revocation, and JWKS endpoints
+- **AT Protocol OAuth**: Authenticate through Bluesky or a compatible self-hosted PDS
+- **Passkey Login**: WebAuthn/FIDO2 support—users can register passkeys and skip the AT Protocol OAuth flow
+- **Forward-Auth SSO Proxy**: nginx `auth_request` based single sign-on for web services without OIDC support
+- **Admin Dashboard**: Web UI with a setup wizard for 20+ common self-hosted apps
+- **Access Control**: Per-user DID and handle-pattern rules with deny-overrides
+- **PKCE Support**: Configurable per client
+- **ES256-Signed JWTs**: Signing keys published through the JWKS endpoint
+
+## Screenshots
+
+ATAuth includes a web-based administration interface for managing authentication,
+OIDC clients, origins, access rules, and integrations.
+
+### Administration
+
+The main administration interface provides an overview of your ATAuth deployment
+and access to its configuration.
+
+![ATAuth administration](docs/screenshots/main.png)
+
+### OIDC Clients
+
+Configure the applications that are allowed to use ATAuth for authentication,
+including their redirect URIs, scopes, and authentication settings.
+
+![ATAuth OIDC clients](docs/screenshots/clients.png)
+
+### Origins
+
+Manage the origins that are permitted to use ATAuth.
+
+![ATAuth origins](docs/screenshots/origins.png)
+
+### Access Rules
+
+Create and manage rules controlling which users and applications can access
+protected resources.
+
+![ATAuth access rules](docs/screenshots/accessrules.png)
+
+### Access Checks
+
+Test and inspect access decisions directly from the administration interface.
+
+![ATAuth access check](docs/screenshots/accesscheck.png)
+
+### Cloudflare Integration
+
+ATAuth can integrate with Cloudflare to provide authentication for protected
+applications and services.
+
+The Cloudflare integration guides you through configuring the required identity
+providers.
+
+![Cloudflare identity providers](docs/screenshots/cloudflare_identifyproviders.png)
+
+Once configured, ATAuth can verify that the Cloudflare integration is working
+correctly.
+
+![Cloudflare integration working](docs/screenshots/cloudflare_itworked.png)
 
 ## Quick Start
 
@@ -52,7 +111,7 @@ Any app that supports OpenID Connect can use ATAuth. No custom integration neede
 
 - Docker and Docker Compose
 - A domain with a DNS record pointing to your server (e.g. `auth.yourdomain.com`)
-- A reverse proxy that terminates TLS (Caddy, Traefik, or nginx)
+- A reverse proxy that terminates TLS (Cloudflare Tunnel, Caddy, Traefik, or nginx)
 
 ### 1. Clone and configure
 
@@ -62,7 +121,7 @@ cd atauth
 cp gateway/.env.example .env
 ```
 
-Edit `.env` -- replace every instance of `auth.yourdomain.com` with your actual domain:
+Edit `.env` and replace every instance of `auth.yourdomain.com` with your actual domain:
 
 ```env
 # These must all use your real domain
@@ -92,7 +151,7 @@ MFA_ENCRYPTION_KEY=<paste-generated-value>
 docker compose up -d
 ```
 
-The gateway starts on `127.0.0.1:3100`. Put a reverse proxy with TLS in front of it. The simplest option is [Caddy](https://caddyserver.com/) (automatic HTTPS):
+The gateway starts on `127.0.0.1:3100`. Put a reverse proxy with TLS in front of it. For example, [Caddy](https://caddyserver.com/) can provision HTTPS automatically:
 
 ```caddyfile
 auth.yourdomain.com {
@@ -108,17 +167,17 @@ See the [Homelab Deployment Guide](docs/HOMELAB.md) for Traefik and nginx exampl
 curl https://auth.yourdomain.com/.well-known/openid-configuration
 ```
 
-You should get a JSON document with all the OIDC endpoints.
+You should receive a JSON document describing the OIDC endpoints.
 
 ### 4. Register your first app
 
-Open `https://auth.yourdomain.com/admin/login`, enter your `ADMIN_TOKEN`, and use the setup wizard to register an app. The wizard includes presets that auto-fill redirect URIs, scopes, and grant types.
+Open `https://auth.yourdomain.com/admin/login`, enter your `ADMIN_TOKEN`, and use the setup wizard to register an app. The wizard includes presets that fill in redirect URIs, scopes, and grant types.
 
-Save the returned **client secret** -- it is only shown once.
+Save the returned **client secret**; it is only shown once.
 
 ### 5. Configure your app
 
-Point your app's OIDC settings to ATAuth's discovery URL:
+Point your application's OIDC settings at ATAuth's discovery URL:
 
 | Setting | Value |
 | --- | --- |
@@ -127,12 +186,15 @@ Point your app's OIDC settings to ATAuth's discovery URL:
 | Client Secret | The secret returned at registration |
 | Scopes | `openid profile` (add `email` if needed) |
 
+For a generic OIDC integration, use the endpoints and supported claims advertised by ATAuth's discovery document. Cloudflare Access can be configured as an OIDC identity provider; use the callback URL shown in your Cloudflare Zero Trust configuration when registering the client.
+
 ## Supported Apps
 
 The setup wizard includes presets for:
 
 | App | Auth Method |
 | --- | --- |
+| Cloudflare Identity Provider | OIDC (OpenID Connect) |
 | Audiobookshelf | OIDC (OpenID Connect) |
 | Jellyfin | OIDC (via SSO plugin) |
 | Gitea / Forgejo | OIDC (built-in) |
@@ -155,9 +217,11 @@ The setup wizard includes presets for:
 | FreshRSS | OIDC (built-in) |
 | Any web service | Forward-auth proxy (nginx `auth_request`) |
 
+Other applications that support standard OIDC can be configured using their generic OIDC settings even if the wizard does not have a preset.
+
 ## Forward-Auth Proxy
 
-For apps without OIDC support, ATAuth provides nginx `auth_request` based SSO. Enable it in `.env`:
+For applications without OIDC support, ATAuth provides nginx `auth_request`-based SSO. Enable it in `.env`:
 
 ```env
 FORWARD_AUTH_ENABLED=true
@@ -185,47 +249,57 @@ location = /auth/verify {
 }
 ```
 
-The admin dashboard generates these config snippets for you.
+The admin dashboard generates these configuration snippets for you.
 
 ## Self-Hosted PDS
 
-With a self-hosted PDS, ATAuth becomes a fully independent auth system:
+ATAuth can authenticate users through a self-hosted PDS as well as Bluesky-hosted infrastructure. For example, users might have handles such as `@alice.your-domain.com`. ATAuth discovers the user's PDS from their handle; no special configuration is normally needed.
 
-- Users get handles like `@alice.your-domain.com`
-- No dependency on Bluesky servers
-- Works on air-gapped networks
-- Same security model as enterprise OAuth
-
-The gateway auto-discovers the user's PDS from their handle. No special configuration needed.
+The exact availability of login and email claims depends on the capabilities and permissions of the user's PDS.
 
 ## Architecture
 
 | Component | Description |
 | --- | --- |
-| **Gateway** | Node.js/Express 5, TypeScript, SQLite |
-| **Identity** | AT Protocol OAuth (user's PDS) |
-| **OIDC Tokens** | ES256 signed JWTs |
-| **Proxy Cookies** | HMAC-SHA256 signed, typed |
-| **Access Control** | Deny-overrides, per-origin + global rules |
+| Gateway | Node.js/Express 5, TypeScript, SQLite |
+| Identity | AT Protocol OAuth through the user's PDS |
+| OIDC tokens | Signed JWTs; signing keys published through JWKS |
+| Proxy cookies | HMAC-SHA256 signed, typed |
+| Access control | Deny-overrides, per-origin and global rules |
 
 ## Security
 
-- No hardcoded secrets -- all sensitive config validated at startup
+- No hardcoded secrets; sensitive configuration is validated at startup
 - Client secrets stored as SHA-256 hashes
 - One-time flash tokens for secret display (never in URLs)
-- PKCE support (configurable per-client)
-- Constant-time comparison for all secret verification
-- HTML escaping on all server-rendered pages
-- HMAC-signed CSRF tokens on all dashboard forms
-- Rate limiting on auth endpoints
-- CSP with per-request nonces for inline scripts
-- WAF-compatible (Cloudflare Managed Ruleset + OWASP)
+- PKCE support, configurable per client
+- Constant-time comparison for secret verification
+- HTML escaping on server-rendered pages
+- HMAC-signed CSRF tokens on dashboard forms
+- Rate limiting on authentication endpoints
+- Content Security Policy with per-request nonces for inline scripts
+- Designed to work behind a reverse proxy and compatible with common WAF configurations
 
 ## Documentation
 
 - [Homelab Deployment Guide](docs/HOMELAB.md)
 - [Security Policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+
+## Credits & Sources
+
+ATAuth builds on work from the AT Protocol community.
+
+The project was originally based on [Tynan Purdy's ATAuth repository on Tangled](https://tangled.org/tynanpurdy.com/atauth), which provided the foundation for this implementation.
+
+The original upstream project is [Cache8063/atauth on GitHub](https://github.com/Cache8063/atauth). The upstream project provides an AT Protocol authentication library and gateway for applications using Bluesky and self-hosted PDS infrastructure.
+
+This repository has since developed independently, with additional features, fixes, integrations, and changes made for its own use cases and deployment model.
+
+### Upstream
+
+- [Tynan Purdy / ATAuth on Tangled](https://tangled.org/tynanpurdy.com/atauth)
+- [Cache8063/atauth on GitHub](https://github.com/Cache8063/atauth)
 
 ## License
 
