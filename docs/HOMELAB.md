@@ -12,7 +12,7 @@ ATAuth provides OIDC-based authentication for your homelab using AT Protocol ide
 ## Deploy
 
 ```bash
-git clone https://github.com/Cache8063/atauth.git
+git clone https://github.com/allani-ca/atauth.git
 cd atauth
 cp gateway/.env.example .env
 ```
@@ -203,7 +203,7 @@ docker run --rm -v atauth_atauth-data:/data -v $(pwd):/backup alpine \
 Using the pre-built image from GHCR:
 
 ```bash
-docker pull ghcr.io/cache8063/atauth-gateway:latest
+docker pull ghcr.io/allani-ca/atauth-gateway:latest
 docker compose up -d
 ```
 

@@ -24,7 +24,7 @@ Blog authentication flow (`blog.arcnode.xyz`) failed with "OAuth state not found
 
 ### 1. Undocumented second atauth instance
 
-The PDS Hetzner server (`46.224.33.19`) had atauth deployed at `/opt/atauth/` using Docker image `ghcr.io/cache8063/atauth-gateway:latest` (v1.0.0, built Dec 11 2025). This instance was:
+The PDS Hetzner server (`46.224.33.19`) had atauth deployed at `/opt/atauth/` using Docker image `ghcr.io/allani-ca/atauth-gateway:latest` (v1.0.0, built Dec 11 2025). This instance was:
 - Not documented in any infrastructure docs
 - Not tracked in the Cloudflare tunnel config
 - Running a version 3+ months behind production
@@ -42,7 +42,7 @@ This meant it told the PDS "I am `apricot.workingtitle.zip`" but it was NOT `apr
 ### 3. Stale container image — no CI/CD pipeline to PDS server
 
 The Gitea CI workflow builds images and pushes to `gitea.cloudforest-basilisk.ts.net/arcnode.xyz/atauth-gateway`. But:
-- The PDS server was pulling from `ghcr.io/cache8063/atauth-gateway:latest` (different registry)
+- The PDS server was pulling from `ghcr.io/allani-ca/atauth-gateway:latest` (different registry)
 - No Watchtower or auto-update mechanism for atauth on the PDS server
 - The Gitea CI has been failing since Feb 25 (runner issues), so even the Gitea registry image was stale (Dec 2025)
 - Had to build v2.2.0 from source directly on the server
