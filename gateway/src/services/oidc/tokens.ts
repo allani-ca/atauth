@@ -32,6 +32,8 @@ export class TokenService {
     nonce?: string;
     did: string;
     handle: string;
+    email?: string;
+    emailVerified?: boolean;
     accessToken?: string;
     expiresIn?: number;
   }): string {
@@ -53,6 +55,13 @@ export class TokenService {
       handle: claims.handle,
       did: claims.did,
     };
+
+    if (claims.email) {
+      payload.email = claims.email;
+      if (claims.emailVerified !== undefined) {
+        payload.email_verified = claims.emailVerified;
+      }
+    }
 
     // Add at_hash if access token is provided
     if (claims.accessToken) {
@@ -102,6 +111,8 @@ export class TokenService {
     scope: string;
     did: string;
     handle: string;
+    email?: string;
+    emailVerified?: boolean;
     nonce?: string;
     accessTokenTtl?: number;
     idTokenTtl?: number;
@@ -126,13 +137,16 @@ export class TokenService {
     };
 
     // Include ID token if openid scope is requested
-    if (params.scope.includes('openid')) {
+    const requestedScopes = params.scope.split(/\s+/).filter(Boolean);
+    if (requestedScopes.includes('openid')) {
       response.id_token = this.createIdToken({
         sub: params.sub,
         aud: params.clientId,
         nonce: params.nonce,
         did: params.did,
         handle: params.handle,
+        email: requestedScopes.includes('email') ? params.email : undefined,
+        emailVerified: requestedScopes.includes('email') ? params.emailVerified : undefined,
         accessToken,
         expiresIn: idTokenTtl,
       });

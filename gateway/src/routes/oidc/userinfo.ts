@@ -78,13 +78,15 @@ export function createUserInfoRouter(
         scopes,
       );
 
-      // If we have email scope, try to get verified email
+      // Include email only when requested. Never assume it is verified if
+      // the PDS did not provide an email confirmation status.
       if (scopes.includes("email")) {
-        const mapping = db.getUserMapping(claims.sub, claims.client_id);
-        if (mapping?.email) {
-          const extendedInfo = userInfo as unknown as Record<string, unknown>;
-          extendedInfo.email = mapping.email;
-          extendedInfo.email_verified = true;
+        const mappedEmail = db.getOIDCUserEmail(did, clientId);
+        if (mappedEmail) {
+          extendedInfo.email = mappedEmail.email;
+          if (mappedEmail.verified !== undefined) {
+            extendedInfo.email_verified = mappedEmail.verified;
+          }
         }
       }
 

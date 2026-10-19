@@ -167,6 +167,13 @@ export class DatabaseService {
       // Column already exists
     }
 
+    // Add email verification state to user_mappings if it doesn't exist.
+    try {
+      this.db.exec('ALTER TABLE user_mappings ADD COLUMN email_verified INTEGER');
+    } catch {
+      // Column already exists.
+    }
+
     // Add email column to user_mappings if it doesn't exist
     try {
       this.db.exec('ALTER TABLE user_mappings ADD COLUMN email TEXT');
@@ -473,15 +480,56 @@ export class DatabaseService {
     stmt.run(mapping.did, mapping.app_id, mapping.user_id, mapping.handle, mapping.email ?? null);
   }
 
-  upsertOIDCUserEmail(did: string, appId: string, handle: string, email?: string): void {
+  upsertOIDCUserEmail(
+    did: string,
+    appId: string,
+    handle: string,
+    email?: string,
+    emailConfirmed?: boolean
+  ): void {
     const stmt = this.db.prepare(`
-      INSERT INTO user_mappings (did, app_id, user_id, handle, email)
-      VALUES (?, ?, 0, ?, ?)
+      INSERT INTO user_mappings (did, app_id, user_id, handle, email, email_verified)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(did, app_id) DO UPDATE SET
         handle = excluded.handle,
-        email = COALESCE(excluded.email, email)
+        email = COALESCE(excluded.email, email),
+        email_verified = CASE
+          WHEN excluded.email IS NOT NULL THEN excluded.email_verified
+          ELSE email_verified
+        END
     `);
-    stmt.run(did, appId, handle, email ?? null);
+    stmt.run(
+      did,
+      appId,
+      did,
+      handle,
+      email ?? null,
+      email == null || emailConfirmed === undefined ? null : Number(emailConfirmed)
+    );
+  }
+
+  /**
+   * Get the email supplied by the user's PDS for a specific OIDC client.
+   * `verified` is omitted when the PDS did not provide a confirmation status.
+   */
+  getOIDCUserEmail(did: string, appId: string): { email: string; verified?: boolean } | null {
+    const stmt = this.db.prepare(
+      'SELECT email, email_verified FROM user_mappings WHERE did = ? AND app_id = ?'
+    );
+    const row = stmt.get(did, appId) as
+      | { email: string | null; email_verified: number | null }
+      | undefined;
+
+    if (!row?.email) {
+      return null;
+    }
+
+    return {
+      email: row.email,
+      ...(row.email_verified !== null && row.email_verified !== undefined
+        ? { verified: row.email_verified === 1 }
+        : {}),
+    };
   }
 
   // Session methods

@@ -21,6 +21,7 @@ export interface OAuthResult {
   did: string;
   handle: string;
   email?: string;
+  emailConfirmed?: boolean;
   accessJwt?: string;
   refreshJwt?: string;
 }
@@ -197,6 +198,7 @@ export class OAuthService {
 
     // Fetch email from PDS via com.atproto.server.getSession (requires account:email scope)
     let email: string | undefined;
+    let emailConfirmed: boolean | undefined;
     try {
       const sessionRes = await session.fetchHandler(
         "/xrpc/com.atproto.server.getSession",
@@ -207,12 +209,13 @@ export class OAuthService {
           emailConfirmed?: boolean;
         };
         email = data.email;
+        emailConfirmed = data.emailConfirmed;
       }
     } catch {
       // PDS may not support or may deny email access; continue without it
     }
 
-    return { did, handle, email };
+    return { did, handle, email, emailConfirmed };
   }
 
   /**

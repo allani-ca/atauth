@@ -112,6 +112,21 @@ describe('TokenService', () => {
       expect(verified?.handle).toBe('alice.bsky.social');
     });
 
+    it('should include email claims when supplied', () => {
+      const token = tokenService.createIdToken({
+        sub: 'did:plc:abc123',
+        aud: 'test-client',
+        did: 'did:plc:abc123',
+        handle: 'alice.bsky.social',
+        email: 'alice@example.com',
+        emailVerified: true,
+      });
+
+      const verified = tokenService.verifyIdToken(token, 'test-client');
+      expect(verified?.email).toBe('alice@example.com');
+      expect(verified?.email_verified).toBe(true);
+    });
+
     it('should include nonce when provided', () => {
       const nonce = 'test-nonce-123';
       const token = tokenService.createIdToken({
@@ -156,6 +171,34 @@ describe('TokenService', () => {
       expect(response.expires_in).toBeDefined();
       expect(response.id_token).toBeDefined();
       expect(response.scope).toBe('openid profile');
+    });
+
+    it('should include email only when the email scope is granted', () => {
+      const withEmailScope = tokenService.createTokenResponse({
+        sub: 'did:plc:abc123',
+        clientId: 'test-client',
+        scope: 'openid profile email',
+        did: 'did:plc:abc123',
+        handle: 'alice.bsky.social',
+        email: 'alice@example.com',
+        emailVerified: true,
+      });
+      const withEmailClaims = tokenService.verifyIdToken(withEmailScope.id_token!, 'test-client');
+      expect(withEmailClaims?.email).toBe('alice@example.com');
+      expect(withEmailClaims?.email_verified).toBe(true);
+
+      const withoutEmailScope = tokenService.createTokenResponse({
+        sub: 'did:plc:abc123',
+        clientId: 'test-client',
+        scope: 'openid profile',
+        did: 'did:plc:abc123',
+        handle: 'alice.bsky.social',
+        email: 'alice@example.com',
+        emailVerified: true,
+      });
+      const withoutEmailClaims = tokenService.verifyIdToken(withoutEmailScope.id_token!, 'test-client');
+      expect(withoutEmailClaims?.email).toBeUndefined();
+      expect(withoutEmailClaims?.email_verified).toBeUndefined();
     });
 
     it('should not include id_token without openid scope', () => {

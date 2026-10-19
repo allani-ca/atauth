@@ -66,3 +66,6 @@ coverage/
 # Gateway data
 gateway/data/
 SECURITY-AUDIT*.md
+
+# Lani's Dev Tools
+sync.bat

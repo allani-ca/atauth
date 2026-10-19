@@ -77,6 +77,8 @@ export class OIDCService {
         'did',
         'name',
         'preferred_username',
+        'email',
+        'email_verified',
       ],
     };
   }

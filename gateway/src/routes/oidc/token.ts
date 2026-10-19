@@ -236,7 +236,10 @@ async function handleAuthorizationCodeGrant(
   db.markAuthorizationCodeUsed(code);
 
   // Generate tokens
-  const scopes = authCode.scope.split(' ');
+  const scopes = authCode.scope.split(' ').filter(Boolean);
+  const mappedEmail = scopes.includes('email')
+    ? db.getOIDCUserEmail(authCode.did, clientId)
+    : null;
   const includeRefreshToken = hasOfflineAccessScope(scopes);
 
   let refreshTokenValue: string | undefined;
@@ -265,6 +268,8 @@ async function handleAuthorizationCodeGrant(
     scope: authCode.scope,
     did: authCode.did,
     handle: authCode.handle,
+    email: mappedEmail?.email,
+    emailVerified: mappedEmail?.verified,
     nonce: authCode.nonce,
     accessTokenTtl: client.access_token_ttl_seconds,
     idTokenTtl: client.id_token_ttl_seconds,
@@ -386,6 +391,10 @@ async function handleRefreshTokenGrant(
     tokenScope = scope;
   }
 
+  const mappedEmail = tokenScope.split(/\s+/).includes('email')
+    ? db.getOIDCUserEmail(storedToken.did, clientId)
+    : null;
+
   // Generate new refresh token
   const newRefreshToken = crypto.randomBytes(32).toString('base64url');
   const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
@@ -408,6 +417,8 @@ async function handleRefreshTokenGrant(
     scope: tokenScope,
     did: storedToken.did,
     handle: storedToken.handle,
+    email: mappedEmail?.email,
+    emailVerified: mappedEmail?.verified,
     accessTokenTtl: client.access_token_ttl_seconds,
     idTokenTtl: client.id_token_ttl_seconds,
     includeRefreshToken: true,

@@ -134,6 +134,10 @@ export interface IDTokenClaims {
   /** AT Protocol specific claims */
   handle: string;
   did: string;
+  /** Present when the `email` scope is granted and an email is available. */
+  email?: string;
+  /** Present only when ATProto supplied an email confirmation status. */
+  email_verified?: boolean;
 }
 
 /** Access Token Claims */
@@ -153,6 +157,8 @@ export interface UserInfoResponse {
   sub: string;
   handle?: string;
   did?: string;
+  email?: string;
+  email_verified?: boolean;
   name?: string;
   preferred_username?: string;
 }
