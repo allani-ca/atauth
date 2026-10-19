@@ -73,7 +73,7 @@ export function createUserInfoRouter(
       const userInfo = buildUserInfo(
         {
           did: claims.sub,
-          handle: mapping?.handle ?? '',
+          handle,
         },
         scopes
       );
