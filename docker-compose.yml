@@ -11,8 +11,8 @@ services:
     build:
       context: ./gateway
       dockerfile: Dockerfile
-    image: ghcr.io/cache8063/atauth-gateway:latest
-    container_name: atauth-gateway
+    image: ghcr.io/allani-ca/atauth:latest
+    container_name: atauth
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -22,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
           cpus: '1.0'
     ports:
       # Bind to localhost only -- use a reverse proxy for external access
