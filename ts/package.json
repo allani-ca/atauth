@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Cache8063/atauth"
+    "url": "https://github.com/allani-ca/atauth"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
