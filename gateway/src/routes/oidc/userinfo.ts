@@ -70,7 +70,6 @@ export function createUserInfoRouter(
       }
 
       // Build UserInfo using the user's mapped handle when available.
-      const mapping = db.getUserMapping(claims.sub, claims.client_id);
       const userInfo = buildUserInfo(
         {
           did: claims.sub,
