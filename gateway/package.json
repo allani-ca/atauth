@@ -39,7 +39,8 @@
     "helmet": "^8.0.0",
     "nodemailer": "^7.0.13",
     "otpauth": "^9.2.1",
-    "qrcode": "^1.5.3"
+    "qrcode": "^1.5.3",
+    "typecheck": "^0.1.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",
