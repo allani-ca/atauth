@@ -58,6 +58,7 @@ describe('OIDC Flow E2E', () => {
     await oidcService.initialize();
 
     // Register test OIDC client
+    // not even my bug waaa
     db.upsertOIDCClient({
       id: TEST_CLIENT_ID,
       name: 'Test OIDC App',
@@ -83,13 +84,6 @@ describe('OIDC Flow E2E', () => {
     const { wellKnownRouter, oauthRouter } = createOIDCRouter(db, oidcService, mockOAuthService);
     app.use('/.well-known', wellKnownRouter);
     app.use('/oauth', oauthRouter);
-  });
-
-  afterAll(() => {
-    // Clean up test database
-    if (fs.existsSync(TEST_DB_PATH)) {
-      fs.unlinkSync(TEST_DB_PATH);
-    }
   });
 
   describe('Discovery Endpoints', () => {
