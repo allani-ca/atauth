@@ -69,20 +69,22 @@ export function createUserInfoRouter(
         }
       }
 
-      // Build user info based on scopes
+      // Build UserInfo using the user's mapped handle when available.
+      const mapping = db.getUserMapping(claims.sub, claims.client_id);
       const userInfo = buildUserInfo(
         {
           did: claims.sub,
-          handle,
+          handle: mapping?.handle ?? '',
         },
-        scopes,
+        scopes
       );
 
-      // Include email only when requested. Never assume it is verified if
-      // the PDS did not provide an email confirmation status.
-      if (scopes.includes("email")) {
-        const mappedEmail = db.getOIDCUserEmail(did, clientId);
+      // Include email only when the email scope was granted. Do not claim
+      // verification unless the PDS supplied an explicit confirmation state.
+      if (scopes.includes('email')) {
+        const mappedEmail = db.getOIDCUserEmail(claims.sub, claims.client_id);
         if (mappedEmail) {
+          const extendedInfo = userInfo as unknown as Record<string, unknown>;
           extendedInfo.email = mappedEmail.email;
           if (mappedEmail.verified !== undefined) {
             extendedInfo.email_verified = mappedEmail.verified;
